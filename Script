@@ -1,0 +1,299 @@
+-- [[ CONFIGURAÇÕES DA INTERFACE PARA O DELTA ]] --
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Remove versões antigas no Delta para não acumular botões na tela
+if PlayerGui:FindFirstChild("AnyMenu_Delta") then
+    PlayerGui.AnyMenu_Delta:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AnyMenu_Delta"
+ScreenGui.Parent = PlayerGui
+ScreenGui.ResetOnSpawn = false
+
+-- [[ VARIÁVEIS DAS FUNÇÕES ]] --
+local valorVelocidade = 16
+local espAtivado = false
+local noclipAtivado = false
+local noclipConnection = nil
+
+-- [[ 1. BOTÃO FLUTUANTE ARRASTÁVEL (BOLINHA DO CAVALEIRO) ]] --
+local IconButton = Instance.new("ImageButton")
+IconButton.Name = "IconeCavaleiro"
+IconButton.Size = UDim2.new(0, 65, 0, 65)
+IconButton.Position = UDim2.new(0, 20, 0, 150)
+IconButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+IconButton.Image = "rbxassetid://6072703135" 
+IconButton.Active = true
+IconButton.Parent = ScreenGui
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0)
+IconCorner.Parent = IconButton
+
+local IconStroke = Instance.new("UIStroke")
+IconStroke.Color = Color3.fromRGB(190, 150, 40)
+IconStroke.Thickness = 2.5
+IconStroke.Parent = IconButton
+
+-- [[ 2. PAINEL PRINCIPAL ("any") ]] --
+local MainPanel = Instance.new("Frame")
+MainPanel.Name = "any"
+MainPanel.Size = UDim2.new(0, 260, 0, 310)
+MainPanel.Position = UDim2.new(0.5, -130, 0.4, -155)
+MainPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainPanel.Visible = false
+MainPanel.Parent = ScreenGui
+
+local PanelCorner = Instance.new("UICorner")
+PanelCorner.CornerRadius = UDim.new(0, 12)
+PanelCorner.Parent = MainPanel
+
+local PanelTitle = Instance.new("TextLabel")
+PanelTitle.Size = UDim2.new(1, 0, 0, 40)
+PanelTitle.BackgroundTransparency = 1
+PanelTitle.Text = "any"
+PanelTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+PanelTitle.TextSize = 22
+PanelTitle.Font = Enum.Font.SourceSansBold
+PanelTitle.Parent = MainPanel
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -35, 0, 5)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 70, 70)
+CloseButton.TextSize = 18
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.Parent = MainPanel
+
+-- [[ 3. SEÇÃO DE CONTROLE DE VELOCIDADE ]] --
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, 0, 0, 30)
+SpeedLabel.Position = UDim2.new(0, 0, 0, 50)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Velocidade: " .. valorVelocidade
+SpeedLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+SpeedLabel.TextSize = 16
+SpeedLabel.Font = Enum.Font.SourceSans
+SpeedLabel.Parent = MainPanel
+
+local MenosBtn = Instance.new("TextButton")
+MenosBtn.Size = UDim2.new(0, 60, 0, 35)
+MenosBtn.Position = UDim2.new(0, 50, 0, 85)
+MenosBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+MenosBtn.Text = "-"
+MenosBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MenosBtn.TextSize = 22
+MenosBtn.Font = Enum.Font.SourceSansBold
+MenosBtn.Parent = MainPanel
+
+local MenosCorner = Instance.new("UICorner")
+MenosCorner.CornerRadius = UDim.new(0, 6)
+MenosCorner.Parent = MenosBtn
+
+local MaisBtn = Instance.new("TextButton")
+MaisBtn.Size = UDim2.new(0, 60, 0, 35)
+MaisBtn.Position = UDim2.new(0, 150, 0, 85)
+MaisBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+MaisBtn.Text = "+"
+MaisBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MaisBtn.TextSize = 22
+MaisBtn.Font = Enum.Font.SourceSansBold
+MaisBtn.Parent = MainPanel
+
+local MaisCorner = Instance.new("UICorner")
+MaisCorner.CornerRadius = UDim.new(0, 6)
+MaisCorner.Parent = MaisBtn
+
+-- [[ 4. BOTÃO DO ESP ]] --
+local EspBtn = Instance.new("TextButton")
+EspBtn.Size = UDim2.new(0, 200, 0, 40)
+EspBtn.Position = UDim2.new(0, 30, 0, 150)
+EspBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+EspBtn.Text = "ESP: DESATIVADO"
+EspBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+EspBtn.TextSize = 16
+EspBtn.Font = Enum.Font.SourceSansBold
+EspBtn.Parent = MainPanel
+
+local EspCorner = Instance.new("UICorner")
+EspCorner.CornerRadius = UDim.new(0, 8)
+EspCorner.Parent = EspBtn
+
+-- [[ 5. BOTÃO DO NOCLIP ]] --
+local NoclipBtn = Instance.new("TextButton")
+NoclipBtn.Size = UDim2.new(0, 200, 0, 40)
+NoclipBtn.Position = UDim2.new(0, 30, 0, 210)
+NoclipBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+NoclipBtn.Text = "NOCLIP: DESATIVADO"
+NoclipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoclipBtn.TextSize = 16
+NoclipBtn.Font = Enum.Font.SourceSansBold
+NoclipBtn.Parent = MainPanel
+
+local NoclipCorner = Instance.new("UICorner")
+NoclipCorner.CornerRadius = UDim.new(0, 8)
+NoclipCorner.Parent = NoclipBtn
+
+-- [[ LÓGICA DE INTERAÇÃO DA INTERFACE ]] --
+IconButton.MouseButton1Click:Connect(function()
+    MainPanel.Visible = not MainPanel.Visible
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    MainPanel.Visible = false
+end)
+
+-- [[ SISTEMA DE VELOCIDADE ]] --
+local function aplicarVelocidade()
+    SpeedLabel.Text = "Velocidade: " .. valorVelocidade
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChildOfClass("Humanoid") then
+        character:FindFirstChildOfClass("Humanoid").WalkSpeed = valorVelocidade
+    end
+end
+
+MenosBtn.MouseButton1Click:Connect(function()
+    valorVelocidade = math.clamp(valorVelocidade - 5, 16, 100)
+    aplicarVelocidade()
+end)
+
+MaisBtn.MouseButton1Click:Connect(function()
+    valorVelocidade = math.clamp(valorVelocidade + 5, 16, 100)
+    aplicarVelocidade()
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid", 5)
+    if hum then hum.WalkSpeed = valorVelocidade end
+end)
+
+-- [[ LÓGICA DO ESP (CORRIGIDA) ]] --
+local function criarESP(character)
+    if not character then return end
+    local p = Players:GetPlayerFromCharacter(character)
+    if p == LocalPlayer then return end
+
+    if character:FindFirstChild("Any_Highlight") then
+        character.Any_Highlight:Destroy()
+    end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "Any_Highlight"
+    highlight.FillColor = Color3.fromRGB(0, 255, 100) -- Verde de dentro
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = Color3.fromRGB(0, 255, 0) -- Contorno Verde forte
+    highlight.OutlineTransparency = 0
+    highlight.Adornee = character
+    highlight.Enabled = espAtivado
+    highlight.Parent = character
+end
+
+local function monitorarJogador(p)
+    if p == LocalPlayer then return end
+    if p.Character then criarESP(p.Character) end
+    p.CharacterAdded:Connect(criarESP)
+end
+
+for _, player in ipairs(Players:GetPlayers()) do monitorarJogador(player) end
+Players.PlayerAdded:Connect(monitorarJogador)
+
+EspBtn.MouseButton1Click:Connect(function()
+    espAtivado = not espAtivado
+    if espAtivado then
+        EspBtn.Text = "ESP: ATIVADO"
+        EspBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    else
+        EspBtn.Text = "ESP: DESATIVADO"
+        EspBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character and player.Character:FindFirstChild("Any_Highlight") then
+            player.Character.Any_Highlight.Enabled = espAtivado
+        end
+    end
+end)
+
+-- [[ LÓGICA DO NOCLIP REFORÇADA PARA MOBILE ]] --
+local function loopNoclip()
+    local character = LocalPlayer.Character
+    if character and noclipAtivado then
+        -- Desativa a colisão física de todas as partes do corpo
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+        -- Força o Humanoid a ignorar o estado de queda e colisão interna
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.NoPhysics)
+        end
+    end
+end
+
+NoclipBtn.MouseButton1Click:Connect(function()
+    noclipAtivado = not noclipAtivado
+    if noclipAtivado then
+        NoclipBtn.Text = "NOCLIP: ATIVADO"
+        NoclipBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        noclipConnection = RunService.Stepped:Connect(loopNoclip)
+    else
+        NoclipBtn.Text = "NOCLIP: DESATIVADO"
+        NoclipBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        -- Restaura o estado normal do boneco ao desligar
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+        end
+    end
+end)
+
+-- [[ CONTROLE DE ARRASTAR NO MOBILE ]] --
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    IconButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+IconButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = IconButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+IconButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
